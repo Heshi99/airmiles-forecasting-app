@@ -117,21 +117,62 @@ elif options == "Model Assessment":
         st.metric(label="MAPE (%)", value=f"{mape * 100:.2f}")
 
 
+
 # 5. Forecast Future
 elif options == "Forecast Future":
-    st.subheader("12-Month Forecast with Holt-Winters")
+    st.subheader("Holt-Winters Forecasting")
 
     forecast_horizon = st.slider("Select Forecast Horizon (months):", min_value=1, max_value=36, value=12)
 
-    model = ExponentialSmoothing(df['y'], trend='mul', seasonal='mul', seasonal_periods=12).fit()
+    st.write("### Adjust Holt-Winters Smoothing Parameters")
+
+    # Default parameters
+    default_alpha = 0.2
+    default_beta = 0.1
+    default_gamma = 0.1
+
+    # Initialize session state
+    if "alpha" not in st.session_state:
+        st.session_state.alpha = default_alpha
+    if "beta" not in st.session_state:
+        st.session_state.beta = default_beta
+    if "gamma" not in st.session_state:
+        st.session_state.gamma = default_gamma
+
+    # Reset button
+    if st.button("Reset Parameters"):
+        st.session_state.alpha = default_alpha
+        st.session_state.beta = default_beta
+        st.session_state.gamma = default_gamma
+        st.success("Parameters reset to default values.")
+
+    # Sliders with session state
+    alpha = st.slider("Alpha (Level Smoothing):", min_value=0.01, max_value=1.0, value=st.session_state.alpha, key="alpha")
+    beta = st.slider("Beta (Trend Smoothing):", min_value=0.01, max_value=1.0, value=st.session_state.beta, key="beta")
+    gamma = st.slider("Gamma (Seasonal Smoothing):", min_value=0.01, max_value=1.0, value=st.session_state.gamma, key="gamma")
+
+    # Fit model
+    model = ExponentialSmoothing(
+        df['y'],
+        trend='mul',
+        seasonal='mul',
+        seasonal_periods=12
+    ).fit(
+        smoothing_level=alpha,
+        smoothing_slope=beta,
+        smoothing_seasonal=gamma
+    )
+
     forecast = model.forecast(steps=forecast_horizon)
 
+    # Plot forecast
     fig, ax = plt.subplots(figsize=(10, 4))
     ax.plot(df['y'], label='Historical')
     ax.plot(forecast, label='Forecast')
-    ax.set_title("Forecast for the selected time period")
+    ax.set_title(f"Forecast for the Next {forecast_horizon} Months")
     ax.legend()
     st.pyplot(fig)
 
+    # Display forecast
     st.write("**Forecasted Values:**")
     st.write(forecast)
